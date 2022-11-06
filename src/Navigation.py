@@ -25,9 +25,9 @@ dT = 0.1
 is_online = True
 
 
-def run_kwargs(params):
+def run_kwargs(params, goal):
     in_bounds = bounds.BoundsRectangle(**params['in_bounds'])
-    goal_bounds = bounds.BoundsRectangle(**params['goal_bounds'])
+    goal_bounds = bounds.BoundsRectangle([goal[0] - 0.05, goal[0] + 0.05], [goal[1] - 0.05, goal[1] + 0.05])
     min_dist = params['min_dist']
     ret = {'field': dynamic_obstacle.ObstacleField(dt=dT),
            'robot_state': robot.DoubleIntegratorRobot(**(params['initial_robot_state'])),
@@ -81,11 +81,11 @@ class PlannerThread (threading.Thread):
                 time.sleep(0)
 
 
-def main():
+def navigate(goal):
     # testing env
     params = param.params
     display = TurtleRunnerDisplay(800, 800)
-    env_params = run_kwargs(params)
+    env_params = run_kwargs(params, goal)
 
     # parameters
     max_steps = int(1e6)
@@ -99,7 +99,7 @@ def main():
     failure_num = 0
     success_num = 0
     # Goal position
-    goal_pos = np.array([0.35, 0.95])
+    goal_pos = goal
     # Parameters
     horizon = 30
     global_horizon = 60
@@ -129,7 +129,7 @@ def main():
         goal_pos, dist=0.1, radius=sensor_dist, safety_dist=0.05)
     # Init Global Planner
     global_planner = GlobalPlanner(dist=0.1, global_dist=0.25, horizon=horizon, global_horizon=global_horizon,
-                                   model=dynamic_model, cfs_planner=cfs_planner, egocircle=inflated_ego_circle, F=F, has_uncertainty=True)
+                                   model=dynamic_model, cfs_planner=cfs_planner, egocircle=inflated_ego_circle, F=F, has_uncertainty=True, goal=goal)
     # Init KalmanFilter
     kf_estimator = KalmanFilter()
 
@@ -213,7 +213,8 @@ def main():
             episode_reward = 0
             state, done = env.reset(), False
             kf_estimator = KalmanFilter()
+            break
 
 
 if __name__ == '__main__':
-    main()
+    navigate(goal = np.array([0.2, 0.2]))

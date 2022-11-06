@@ -5,7 +5,7 @@ import copy
 import collections
 
 class GlobalPlanner:
-    def __init__(self, dist, global_dist, horizon, global_horizon, model, cfs_planner, egocircle, F, has_uncertainty):
+    def __init__(self, dist, global_dist, horizon, global_horizon, model, cfs_planner, egocircle, F, has_uncertainty, goal):
         self.dist = dist # the distance between intermedia waypoints
         self.global_dist = global_dist
         self.horizon = horizon # the planning horizon
@@ -20,6 +20,7 @@ class GlobalPlanner:
         self.top_two_diff = 0
         self.top_three_diff = 0
         self.traj_num = []
+        self.goal = goal
 
     def IntermediaGoalPlanner(self, dt: float, robot_state: np.ndarray, goal: np.ndarray, sensor_data: dict):
         '''
@@ -46,7 +47,7 @@ class GlobalPlanner:
         simple_path_plan = False
         if (len(list(self.ego_circle.inflated_depths.keys())) <= 1):
             init_pos = np.array(robot_state[:2])
-            goal_pos = np.array([0.35, 0.95])
+            goal_pos = self.goal
             vel_direction = goal_pos - init_pos
             vel_direction = vel_direction / np.linalg.norm(vel_direction)
             gap_trajs['0_0'] = []
