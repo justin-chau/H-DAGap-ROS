@@ -14,10 +14,8 @@ from __future__ import absolute_import
 
 from past.utils import old_div
 import math
-import time
 import turtle
 import runner
-import pdb
 
 class TurtleRunnerDisplay( runner.BaseRunnerDisplay ):
 
@@ -224,19 +222,6 @@ class TurtleRunnerDisplay( runner.BaseRunnerDisplay ):
 
     def obstacle_set_color(self, i, color = 'grey'):
         self.obstacle_turtles[i].color(color)
-
-    def obstacle_estimated_at_loc(self, i, x, y, is_match=False):
-        return
-        if i not in self.estimated_obstacle_turtles:
-            trtl = turtle.Turtle()
-            trtl.shape("circle")
-            trtl.color("#88ff88" if is_match else "#aa4444")
-            trtl.shapesize(0.2,0.2)
-            trtl.penup()
-            self.estimated_obstacle_turtles[i] = trtl
-        self.estimated_obstacle_turtles[i].color("#88ff88" if is_match else "#aa4444")
-        self.estimated_obstacle_turtles[i].setposition(x,y)
-        self.estimated_obstacle_turtles[i].showturtle()
 
     def robot_at_loc(self, x, y, h, is_ssa = False):
         self.robot_turtle.setposition(x,y)
