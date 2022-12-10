@@ -22,19 +22,6 @@ class GlobalPlanner:
         self.traj_num = []
         self.goal = goal
 
-    def IntermediaGoalPlanner(self, dt: float, robot_state: np.ndarray, goal: np.ndarray, sensor_data: dict):
-        '''
-        Return:
-            intermedia_goal: np.array, []
-            traj: np.array, trajectory from the current robot state to the intermedia goal
-        '''        
-        goal_rel_pos = goal - np.array(robot_state[:2])
-        goal_rel_pos = self.dist * goal_rel_pos / (np.linalg.norm(goal_rel_pos, 2))        
-        intermedia_goal = np.vstack(np.array([goal_rel_pos[0], goal_rel_pos[1], 0, 0]))
-        traj = self.IntegratorPlanner(dt, robot_state, intermedia_goal, self.horizon)
-        return intermedia_goal, traj
-
-
     def MultiDynTrajPlanner(self, robot_state: np.ndarray, sensor_data, dt = 0.1):
         gap_trajs = {}
         while(1):
@@ -125,86 +112,6 @@ class GlobalPlanner:
 
         best_traj_id = max(cfs_score, key=cfs_score.get)
         return safe_trajs[best_traj_id], replan_times[best_traj_id]
-
-    def MultiStaticTrajPlanner(self, dt: float, robot_state: np.ndarray, sensor_data):
-        score = {}
-        safe_trajs = {}
-        self.ego_circle.parse_sensor_data(sensor_data)
-        simple_path_plan = False
-        if (len(list(self.ego_circle.inflated_depths.keys())) <= 1):
-            init_pos = np.array(robot_state[:2])
-            goal_pos = np.array([0.35, 0.95])
-            vel_direction = goal_pos - init_pos
-            vel_direction = vel_direction / np.linalg.norm(vel_direction)
-            traj = []
-            for step in range(30):
-                traj.append(list(vel_direction * 0.02 * step * dt))
-            traj = np.array(traj)
-            traj_vel = (traj[1:] - traj[:-1]) * (1./dt)
-            traj_vel = np.vstack((traj_vel, traj_vel[-1]))
-            traj = np.hstack((traj, traj_vel))
-            #print(gap_trajs)
-            score['0_0'] = 0            
-            safe_trajs['0_0'] = traj
-            simple_path_plan = True
-        # build gaps
-        if (not simple_path_plan):
-            possible_gaps = self.ego_circle.build_gaps(sensor_data)
-            for gap in possible_gaps:
-                traj = self.IntegratorPlanner(dt, robot_state, self.horizon, gap)
-                traj_vel = (traj[1:] - traj[:-1]) * (1./dt)
-                traj_vel = np.vstack((traj_vel, traj_vel[-1]))
-                traj = np.hstack((traj, traj_vel))
-                safe_traj = traj
-                score[gap.id] = -np.linalg.norm([0.35-safe_traj[-1][0], 0.95-safe_traj[-1][1]]) #safe_traj[-1][1]
-                #safe_traj, cost = self.cfs_planner(dt, traj, sensor_data, self.F)  
-                #score[gap.id] = safe_traj[-1][1] - cost
-                #print(f"id {gap.id}, goal {traj[-1][1]}, cost {cost}, score {score[gap.id]}")
-                safe_trajs[gap.id] = safe_traj
-        best_traj_id = max(score, key=score.get)
-        return safe_trajs[best_traj_id]
-
-    def LinearIntegratorPlanner(self, dt, cur_state, goal_state, N):
-        # assume integrater uses first _state_dimension elements from est data
-        state = np.vstack(np.array([0, 0, cur_state[2], cur_state[3]])) #np.vstack(cur_state.ravel()) #
-        xd = self._state_dimension
-        # both state and goal is in [pos, vel, etc.]' with shape [T, ?, 1]
-        A = self.model.A(dt=dt)
-        B = self.model.B(dt=dt)
-
-        # lifted system for tracking last state
-        Abar = np.vstack([np.linalg.matrix_power(A, i) for i in range(1,N+1)])
-        Bbar = np.vstack([
-            np.hstack([
-                np.hstack([np.linalg.matrix_power(A, p) @ B for p in range(row, -1, -1)]),
-                np.zeros((xd, N-1-row))
-            ]) for row in range(N)
-        ])
-        #pdb.set_trace()
-        # tracking each state dim
-        n_state_comp = 2 #len(self.model.state_component) # number of pos, vel, etc.
-        traj = np.zeros((N, xd * n_state_comp, 1))
-        for i in range(xd):
-            # vector: pos, vel, etc. of a single dimension
-            x = np.vstack([ state[ j * xd + i, 0 ] for j in range(n_state_comp) ])
-            xref = np.vstack([ goal_state[ j * xd + i, 0 ] for j in range(n_state_comp) ])
-
-            ubar = np.linalg.lstsq(
-                a = Bbar[-xd:, :], b = xref - np.linalg.matrix_power(A, N) @ x)[0] # get solution
-
-            xbar = (Abar @ x + Bbar @ ubar).reshape(N, n_state_comp, 1)
-
-            for j in range(n_state_comp):
-                traj[:, j * xd + i] = xbar[:, j]
-        traj = traj.squeeze()    
-        #print(f"cur_state {cur_state}, goal_state {goal_state}, traj {traj}")    
-        return traj
-
-
-
-    def IntermediaGoalPlannerv2(self, dt: float, robot_state: np.ndarray, best_gap):
-        traj = self.IntegratorPlanner(dt, robot_state, self.horizon, best_gap)
-        return traj
 
     def IntegratorPlanner(self, dt, cur_state, N, best_gap):
         # assume integrater uses first _state_dimension elements from est data

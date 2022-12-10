@@ -28,14 +28,4 @@ params = {
     "vy": 0, 
     "max_speed": 0.02
   }, 
-  "goal_bounds": {
-    "x_bounds": [
-      0.3, 
-      0.4
-    ], 
-    "y_bounds": [
-      0.9, 
-      1.0
-    ]
-  }
 }

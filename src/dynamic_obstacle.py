@@ -85,7 +85,7 @@ class ObstacleField(object):
 
     def random_init(self):
         obstacles = []
-        for i in range(50):
+        for i in range(20):
             #obstacles.append(self.random_init_obstacle(t = -100))
             obstacles.append(self.random_init_obstacle(t = 0))
         self.obstacles = obstacles
